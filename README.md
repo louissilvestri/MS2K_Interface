@@ -41,6 +41,27 @@ automation are recorded/played by the DAW and routed to the MS2000 from the trac
 - **Librarian:** Load/Save `.syx`, "Get All Patches", bank list, click-to-load-and-send
   (loading seeds the *full* patch bytes incl. name, so the synth shows the real name).
 
+> ### ⚠ Known limitation — receiving SysEx in the plugin (Reaper)
+> **"Get All Patches" / "Get Current" inside the VST may not populate in Reaper.** Everything the
+> plugin *sends* works (edits, automation, the dump request — the synth shows "Processing…"), and
+> CC/NRPN from the synth comes back fine (so **Listen to synth** works). But **Reaper does not
+> feed real-time input *SysEx* into a track's FX chain** — it only records SysEx into MIDI items —
+> so the synth's program/bank dump never reaches the plugin. This is a host (DAW) routing
+> limitation, not a bug in this code or JUCE: the standalone app talks to the hardware directly
+> (RtMidi) and receives dumps perfectly, and the plugin's *outgoing* SysEx is intact (confirmed by
+> the [JUCE VST3 SysEx fix, Nov 2023](https://forum.juce.com/t/juce-vst3-sysex-midi-bug/58893),
+> which this build includes). Setting the track's MIDI input to "All Channels" (so channel-less
+> SysEx isn't filtered) is necessary but not sufficient — Reaper still won't pass it to the FX.
+>
+> **Workaround — use a `.syx` file as the bridge (no patch transfer needed inside the DAW):**
+> 1. In the **standalone app**: **Get All Patches**, then **Save .syx**.
+> 2. In the **plugin**: **Load .syx** and pick that file — the bank populates and you can
+>    click-to-load-and-send as normal. Re-export from the standalone whenever you re-organize
+>    patches on the synth.
+>
+> (A permanent fix — giving the plugin its own direct hardware MIDI input via RtMidi, bypassing
+> Reaper for receiving — is possible but unbuilt; see the project notes.)
+
 ## Status — v1 complete (verified on hardware)
 | Piece | State |
 |-------|-------|
@@ -53,7 +74,7 @@ automation are recorded/played by the DAW and routed to the MS2000 from the trac
 | All-parameter app→synth sweep (CC/NRPN/dump) | ✅ **77/77** (`tests/verify_all.cpp`) |
 | Librarian: bank list, load/save `.syx`, click-to-load + auto-send | ✅ |
 | **Mod-Sequencer** (3 lanes × 16 steps) — model + panel | ✅ **60/60** (`tests/verify_modseq_hw.cpp`) |
-| **VST3 plugin** — full automation, bidirectional sync, librarian | ✅ builds & runs in Reaper |
+| **VST3 plugin** — full automation, bidirectional sync, Load/Save `.syx` | ✅ runs in Reaper (in-plugin SysEx *receive* — see limitation above) |
 
 ## Mod-Sequencer
 ![Mod-Sequencer panel](docs/screenshots/mod-sequencer.png)
