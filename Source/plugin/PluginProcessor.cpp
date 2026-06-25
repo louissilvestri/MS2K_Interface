@@ -1,0 +1,306 @@
+#include "PluginProcessor.h"
+#include "PluginEditor.h"
+
+namespace ms2000 {
+
+// ---- Def: program byte <-> raw value ---------------------------------------
+void MS2KAudioProcessor::Def::applyRaw(Program& p, int raw) const {
+    if (spec) { setDisplay(p, 0, *spec, raw - displayOffset); return; }
+    switch (seqKind) {
+        case 1: modseq::setOn(p, raw != 0);            break;
+        case 2: modseq::setRunMode(p, raw);            break;
+        case 3: modseq::setResolution(p, raw);         break;
+        case 4: modseq::setLastStep(p, raw);           break;
+        case 5: modseq::setSeqType(p, raw);            break;
+        case 6: modseq::setKeySync(p, raw);            break;
+        case 7: modseq::setDest(p, seqLane, raw);      break;
+        case 8: modseq::setMotion(p, seqLane, raw);    break;
+        case 9: modseq::setStep(p, seqLane, seqStep, raw); break;
+        default: break;
+    }
+}
+
+int MS2KAudioProcessor::Def::readRaw(const Program& p) const {
+    if (spec) return getRaw(p, 0, *spec);
+    switch (seqKind) {
+        case 1: return modseq::on(p) ? 1 : 0;
+        case 2: return modseq::runMode(p);
+        case 3: return modseq::resolution(p);
+        case 4: return modseq::lastStep(p);
+        case 5: return modseq::seqType(p);
+        case 6: return modseq::keySync(p);
+        case 7: return modseq::dest(p, seqLane);
+        case 8: return modseq::motion(p, seqLane);
+        case 9: return modseq::step(p, seqLane, seqStep);
+        default: return 0;
+    }
+}
+
+// ---- NRPN map (mirrors MidiEngine) -----------------------------------------
+namespace {
+struct NrpnEntry { const char* id; uint8_t msb, lsb; };
+const NrpnEntry kNrpn[] = {
+    {"arp_on",0x00,0x02}, {"arp_range",0x00,0x03}, {"arp_latch",0x00,0x04},
+    {"arp_type",0x00,0x07}, {"arp_gate",0x00,0x0A},
+    {"patch1_src",0x04,0x00},{"patch2_src",0x04,0x01},{"patch3_src",0x04,0x02},{"patch4_src",0x04,0x03},
+    {"patch1_dst",0x04,0x08},{"patch2_dst",0x04,0x09},{"patch3_dst",0x04,0x0A},{"patch4_dst",0x04,0x0B},
+};
+const NrpnEntry* findNrpn(const std::string& id) {
+    for (auto& e : kNrpn) if (id == e.id) return &e;
+    return nullptr;
+}
+void addRaw(juce::MidiBuffer& buf, const Bytes& b, int sample) {
+    if (b.empty()) return;
+    if (b[0] == 0xF0) { buf.addEvent(juce::MidiMessage(b.data(), (int)b.size()), sample); return; }
+    size_t i = 0;
+    while (i < b.size()) {
+        size_t j = i + 1; while (j < b.size() && b[j] < 0x80) ++j;
+        buf.addEvent(juce::MidiMessage(b.data() + (int)i, (int)(j - i)), sample);
+        i = j;
+    }
+}
+} // namespace
+
+// ---- construction ----------------------------------------------------------
+MS2KAudioProcessor::MS2KAudioProcessor()
+    : juce::AudioProcessor(BusesProperties()) {   // MIDI effect: no audio buses
+    buildParams();
+}
+
+MS2KAudioProcessor::~MS2KAudioProcessor() {
+    for (auto& d : defs_) if (d.param) d.param->removeListener(this);
+}
+
+void MS2KAudioProcessor::buildParams() {
+    auto add = [this](Def d, const juce::String& id, const juce::String& name,
+                      int lo, int hi, int def) {
+        def = juce::jlimit(lo, hi, def);
+        auto* p = new juce::AudioParameterInt(juce::ParameterID(id, 1), name, lo, hi, def);
+        d.param = p;
+        addParameter(p);
+        p->addListener(this);
+        idToDef_[id.toStdString()] = (int)defs_.size();
+        defs_.push_back(d);
+    };
+
+    // Synth parameters, straight from the shared table.
+    for (const auto& s : parameterTable()) {
+        Def d; d.spec = &s; d.displayOffset = s.displayOffset;
+        const int idx = (int)defs_.size();
+        if (s.cc >= 0)                 { d.tx = Def::Tx::CC;   ccRecv_[s.cc] = idx; }
+        else if (auto* n = findNrpn(s.id)) { d.tx = Def::Tx::NRPN; d.nrpnMsb = n->msb; d.nrpnLsb = n->lsb;
+                                            nrpnRecv_[(n->msb << 8) | n->lsb] = idx; }
+        else                           d.tx = Def::Tx::Dump;
+        const int lo = s.rawMin(), hi = s.rawMax();
+        add(d, juce::String(s.id), juce::String(s.label), lo, hi, getRaw(audioProg_, 0, s));
+    }
+
+    // Mod-sequencer parameters (all Dump-class — sent via coalesced full dump).
+    auto seq = [](int kind, int lane = 0, int step = 0) {
+        Def d; d.tx = Def::Tx::Dump; d.seqKind = kind; d.seqLane = lane; d.seqStep = step; return d;
+    };
+    add(seq(1), "seq_on",   "Seq On/Off",   0, 1,  modseq::on(audioProg_) ? 1 : 0);
+    add(seq(2), "seq_run",  "Seq Run Mode", 0, 1,  modseq::runMode(audioProg_));
+    add(seq(3), "seq_res",  "Seq Resolution", 0, 15, modseq::resolution(audioProg_));
+    add(seq(4), "seq_last", "Seq Last Step", 0, 15, modseq::lastStep(audioProg_));
+    add(seq(5), "seq_type", "Seq Type",     0, 3,  modseq::seqType(audioProg_));
+    add(seq(6), "seq_sync", "Seq Key Sync", 0, 2,  modseq::keySync(audioProg_));
+    for (int l = 0; l < modseq::kLanes; ++l) {
+        const juce::String pre = "seq" + juce::String(l + 1) + "_";
+        const juce::String nm  = "Seq" + juce::String(l + 1) + " ";
+        add(seq(7, l), pre + "dest",   nm + "Dest",   0, 30, modseq::dest(audioProg_, l));
+        add(seq(8, l), pre + "motion", nm + "Motion", 0, 1,  modseq::motion(audioProg_, l));
+        for (int s = 0; s < modseq::kSteps; ++s)
+            add(seq(9, l, s), pre + "s" + juce::String(s + 1).paddedLeft('0', 2),
+                nm + "Step " + juce::String(s + 1), -63, 63, modseq::step(audioProg_, l, s));
+    }
+
+    dirtyN_ = (int)defs_.size();
+    dirty_  = std::make_unique<std::atomic<bool>[]>((size_t)dirtyN_);
+    for (int i = 0; i < dirtyN_; ++i) dirty_[i].store(false);
+}
+
+int MS2KAudioProcessor::defIndexForId(const juce::String& id) const {
+    auto it = idToDef_.find(id.toStdString());
+    return it == idToDef_.end() ? -1 : it->second;
+}
+
+// ---- parameter changes (UI on message thread, host on audio thread) --------
+void MS2KAudioProcessor::parameterValueChanged(int index, float) {
+    if (index >= 0 && index < dirtyN_) { dirty_[index].store(true); anyDirty_.store(true); }
+}
+
+void MS2KAudioProcessor::setParamRaw(int i, int raw) {
+    if (i >= 0 && i < (int)defs_.size()) *defs_[(size_t)i].param = raw; // notifies host -> dirty
+}
+int MS2KAudioProcessor::paramRaw(int i) const {
+    return (i >= 0 && i < (int)defs_.size()) ? defs_[(size_t)i].param->get() : 0;
+}
+
+// ---- MIDI emission ---------------------------------------------------------
+void MS2KAudioProcessor::emitParamMidi(const Def& d, int raw, int ch, juce::MidiBuffer& out, int sample) {
+    if (d.spec && d.tx == Def::Tx::CC)
+        addRaw(out, realtimeForParam(*d.spec, raw, (uint8_t)ch), sample);
+    else if (d.spec && d.tx == Def::Tx::NRPN)
+        addRaw(out, buildNRPN((uint8_t)ch, d.nrpnMsb, d.nrpnLsb, (uint8_t)ccValueForRaw(*d.spec, raw)), sample);
+    else
+        needsDump_.store(true);   // no realtime path -> coalesced full dump
+}
+
+void MS2KAudioProcessor::loadFullProgram(const Program& p, bool sendToSynth) {
+    const juce::ScopedLock sl(pendingLock_);
+    pendingFull_ = p; pendingFullSend_ = sendToSynth; hasPendingFull_ = true;
+}
+
+void MS2KAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi) {
+    buffer.clear();
+    const int ch = channel_.load();
+    juce::MidiBuffer out;
+
+    // Install a freshly loaded patch (full bytes incl. name): make it the dump
+    // base and sync every parameter to it without emitting per-param MIDI.
+    {
+        Program full; bool got = false, send = false;
+        { const juce::ScopedLock sl(pendingLock_);
+          if (hasPendingFull_) { full = pendingFull_; send = pendingFullSend_; hasPendingFull_ = false; got = true; } }
+        if (got) {
+            audioProg_ = full;
+            for (int i = 0; i < dirtyN_; ++i) {
+                *defs_[(size_t)i].param = defs_[(size_t)i].readRaw(audioProg_);
+                dirty_[i].store(false);     // synced silently; don't echo each param
+            }
+            if (send) wantForceDump_ = true; // one complete dump (name included)
+        }
+    }
+
+    // Pass through anything that isn't ours; consume SysEx (synth dump replies)
+    // and, when listening, the synth's CC/NRPN (so knob moves sync the UI and
+    // don't echo straight back out).
+    const bool listening = listening_.load();
+    for (const auto meta : midi) {
+        const auto m = meta.getMessage();
+        if (m.isSysEx()) { handleIncoming(m); continue; }
+        if (listening && m.isController() && m.getChannel() == ch + 1) {
+            handleSynthCC((uint8_t)m.getControllerNumber(), (uint8_t)m.getControllerValue());
+            continue;
+        }
+        out.addEvent(m, meta.samplePosition);
+    }
+
+    if (wantRequest_.exchange(false))
+        addRaw(out, makeRequest(Func::CurrentProgramDumpRequest, (uint8_t)ch), 0);
+    if (wantBankRequest_.exchange(false))
+        addRaw(out, makeRequest(Func::ProgramDumpRequest, (uint8_t)ch), 0);
+
+    if (anyDirty_.exchange(false)) {
+        for (int i = 0; i < dirtyN_; ++i) {
+            if (!dirty_[i].exchange(false)) continue;
+            const auto& d = defs_[(size_t)i];
+            const int raw = d.param->get();
+            d.applyRaw(audioProg_, raw);
+            emitParamMidi(d, raw, ch, out, 0);
+        }
+    }
+
+    samplesSinceDump_ += juce::jmax(1, buffer.getNumSamples());
+    const bool force = wantForceDump_.exchange(false);
+    if (needsDump_.load() || force) {
+        const int minGap = (int)(sampleRate_ * 0.06); // <= ~16 dumps/sec
+        if (force || samplesSinceDump_ >= minGap) {
+            Bytes d(audioProg_.bytes().begin(), audioProg_.bytes().end());
+            addRaw(out, makeProgramDump(d, (uint8_t)ch, Func::CurrentProgramDump), 0);
+            samplesSinceDump_ = 0;
+            needsDump_.store(false);
+        }
+    }
+
+    midi.swapWith(out);
+}
+
+void MS2KAudioProcessor::handleIncoming(const juce::MidiMessage& m) {
+    Bytes full; full.reserve((size_t)m.getSysExDataSize() + 2);
+    full.push_back(0xF0);
+    full.insert(full.end(), m.getSysExData(), m.getSysExData() + m.getSysExDataSize());
+    full.push_back(0xF7);
+    auto toProgram = [](const Bytes& b) {
+        std::array<uint8_t, kProgramSize> a{}; std::copy_n(b.begin(), kProgramSize, a.begin()); return Program(a);
+    };
+    if (auto prog = parseProgramDump(full)) {
+        const juce::ScopedLock sl(incomingLock_);
+        incomingProg_ = toProgram(*prog); hasIncoming_ = true;
+    } else if (auto bank = parseBankDump(full)) {
+        std::vector<Program> progs; progs.reserve(bank->size());
+        for (const auto& b : *bank) progs.push_back(toProgram(b));
+        const juce::ScopedLock sl(incomingLock_);
+        incomingBank_ = std::move(progs); hasIncomingBank_ = true;
+    }
+}
+
+bool MS2KAudioProcessor::takeIncoming(Program& out) {
+    const juce::ScopedLock sl(incomingLock_);
+    if (!hasIncoming_) return false;
+    out = incomingProg_; hasIncoming_ = false; return true;
+}
+
+bool MS2KAudioProcessor::takeIncomingBank(std::vector<Program>& out) {
+    const juce::ScopedLock sl(incomingLock_);
+    if (!hasIncomingBank_) return false;
+    out = std::move(incomingBank_); hasIncomingBank_ = false; return true;
+}
+
+// Decode one CC from the synth into a parameter (mirrors MidiEngine::handleCC).
+void MS2KAudioProcessor::handleSynthCC(uint8_t cc, uint8_t value) {
+    if (cc == 99) { nrpnMsb_ = value; return; }
+    if (cc == 98) { nrpnLsb_ = value; return; }
+    if (cc == 6) {                                   // NRPN data entry MSB
+        if (nrpnMsb_ >= 0 && nrpnLsb_ >= 0) {
+            auto it = nrpnRecv_.find((nrpnMsb_ << 8) | nrpnLsb_);
+            if (it != nrpnRecv_.end()) {
+                const auto& d = defs_[(size_t)it->second];
+                if (d.spec) applyParamFromSynth(it->second, rawFromCcValue(*d.spec, value));
+            }
+        }
+        return;
+    }
+    if (cc == 38) return;                            // data entry LSB (ignored)
+    auto it = ccRecv_.find(cc);
+    if (it == ccRecv_.end()) return;
+    const auto& d = defs_[(size_t)it->second];
+    if (d.spec) applyParamFromSynth(it->second, rawFromCcValue(*d.spec, value));
+}
+
+// Update a parameter from the synth without scheduling an outgoing echo.
+void MS2KAudioProcessor::applyParamFromSynth(int i, int raw) {
+    auto& d = defs_[(size_t)i];
+    d.applyRaw(audioProg_, raw);
+    *d.param = raw;              // notifies host + editor (UI follows the synth)
+    dirty_[i].store(false);      // ...but don't re-emit it back to the synth
+}
+
+// ---- state ------------------------------------------------------------------
+void MS2KAudioProcessor::getStateInformation(juce::MemoryBlock& dest) {
+    juce::MemoryOutputStream os(dest, false);
+    os.writeInt(0x4D533201);                 // 'MS2\1' magic/version
+    os.writeInt(channel_.load());
+    os.writeInt((int)defs_.size());
+    for (auto& d : defs_) os.writeInt(d.param->get());
+}
+
+void MS2KAudioProcessor::setStateInformation(const void* data, int size) {
+    juce::MemoryInputStream is(data, (size_t)size, false);
+    if (is.readInt() != 0x4D533201) return;
+    setChannel(is.readInt());
+    const int n = is.readInt();
+    for (int i = 0; i < n && i < (int)defs_.size(); ++i)
+        *defs_[(size_t)i].param = is.readInt();
+}
+
+juce::AudioProcessorEditor* MS2KAudioProcessor::createEditor() {
+    return new MS2KPluginEditor(*this);
+}
+
+} // namespace ms2000
+
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
+    return new ms2000::MS2KAudioProcessor();
+}

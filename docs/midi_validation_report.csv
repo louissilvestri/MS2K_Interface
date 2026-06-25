@@ -1,0 +1,50 @@
+Step,Control,Expected,Detected,Send Responded
+1,OSC1 Wave,CC 77,CC 77   (2 msgs  val 54–72),yes
+2,OSC1 Control 1,CC 14,CC 14   (56 msgs  val 30–101),yes
+3,OSC1 Control 2,CC 15,CC 15   (25 msgs  val 42–118),yes
+4,OSC2 Wave,CC 78,CC 78   (1 msgs  val 64–64),yes
+5,OSC2 Osc Mod,CC 82,CC 82   (1 msgs  val 43–43),yes
+6,OSC2 Semitone,CC 18,CC 18   (18 msgs  val 64–127),yes
+7,OSC2 Tune,CC 19,CC 19   (50 msgs  val 1–64),yes
+8,Mixer OSC1 Level,CC 20,CC 20   (17 msgs  val 8–82),yes
+9,Mixer OSC2 Level,CC 21,CC 21   (16 msgs  val 62–121),yes
+10,Mixer Noise Level,CC 22,CC 22   (13 msgs  val 1–62),yes
+11,Filter Type,CC 83,CC 83   (1 msgs  val 43–43),yes
+12,Filter Cutoff,CC 74,CC 74   (29 msgs  val 1–62),yes
+13,Filter Resonance,CC 71,CC 71   (22 msgs  val 66–104),yes
+14,Filter EG1 Int,CC 79,CC 79   (14 msgs  val 72–123),yes
+15,Filter KBD Track,CC 85,CC 85   (12 msgs  val 5–64),yes
+16,Amp Level,CC 7,CC 7   (19 msgs  val 51–118),yes
+17,Amp Pan,CC 10,CC 10   (9 msgs  val 18–71),yes
+18,Amp EG2/Gate,CC 86,CC 86   (1 msgs  val 127–127),yes
+19,Amp Distortion,CC 92,CC 92   (1 msgs  val 127–127),yes
+20,EG1 Attack,CC 23,CC 23   (21 msgs  val 1–108),yes
+21,EG1 Decay,CC 24,CC 24   (8 msgs  val 61–110),yes
+22,EG1 Sustain,CC 25,CC 25   (11 msgs  val 3–60),yes
+23,EG1 Release,CC 26,CC 26   (8 msgs  val 4–63),yes
+24,EG2 Attack,CC 73,CC 73   (9 msgs  val 21–91),yes
+25,EG2 Decay,CC 75,CC 75   (5 msgs  val 4–58),yes
+26,EG2 Sustain,CC 70,CC 70   (15 msgs  val 26–100),yes
+27,EG2 Release,CC 72,CC 72   (10 msgs  val 8–54),yes
+28,LFO1 Wave,CC 87,CC 87   (1 msgs  val 0–0),yes
+29,LFO1 Frequency,CC 27,CC 27   (13 msgs  val 4–79),yes
+30,LFO2 Wave,CC 88,CC 88   (1 msgs  val 127–127),yes
+31,LFO2 Frequency,CC 76,CC 76   (8 msgs  val 8–76),yes
+32,Portamento Time,CC 5,CC 5   (13 msgs  val 81–120),yes
+33,Patch 1 Intensity,CC 28,CC 28   (12 msgs  val 69–127),yes
+34,Patch 2 Intensity,CC 29,CC 29   (9 msgs  val 64–127),yes
+35,Patch 3 Intensity,CC 30,CC 30   (5 msgs  val 64–127),yes
+36,Patch 4 Intensity,CC 31,CC 31   (4 msgs  val 82–127),yes
+37,Mod FX Speed,CC 12,CC 12   (20 msgs  val 3–100),yes
+38,Mod FX Depth,CC 93,CC 93   (12 msgs  val 45–126),yes
+39,Delay Time,CC 13,CC 13   (17 msgs  val 36–95),yes
+40,Delay Depth,CC 94,CC 94   (12 msgs  val 70–127),yes
+41,Mod-Seq On/Off,CC 89,CC 89   (1 msgs  val 127–127),yes
+42,Arp On/Off,NRPN 00 02,NRPN 00 02   (1 msgs),yes
+43,Arp Latch,NRPN 00 04,NRPN 00 04   (1 msgs),yes
+44,Arp Range (Octaves),NRPN 00 03,NRPN 00 03   (2 msgs),yes
+45,Arp Type,NRPN 00 07,NRPN 00 07   (1 msgs),yes
+46,Arp Gate,NRPN 00 0A,NRPN 00 0A   (11 msgs),yes
+47,Patch 1 Source,NRPN 04 00,NRPN 04 00   (1 msgs),yes
+48,Patch 1 Dest,NRPN 04 08,NRPN 04 08   (1 msgs),yes
+49,Timbre Select,(unmapped),"CC 95   (1 msgs, val 127-127)",

@@ -1,0 +1,136 @@
+Section,Sub-section,Parameter,MIDI CC,CC Value,Notes
+Audio In,Input,Inst (line/synth in),No,,Physical audio input jack - not a MIDI control
+Audio In,Input,Voice (mic in),No,,Physical audio input jack - not a MIDI control
+Power/Volume,Master,Power/Volume,No,,Master output level - not a MIDI parameter
+Oscillator 1,Wave (CC 77),Saw,77,0-15,One CC selects the wave; value picks the band
+Oscillator 1,Wave (CC 77),Pulse,77,16-31,Was 'PWM' - the wave is Pulse; PWM comes from Control 1
+Oscillator 1,Wave (CC 77),Triangle,77,32-47,
+Oscillator 1,Wave (CC 77),Sine,77,48-63,
+Oscillator 1,Wave (CC 77),Vox Wave,77,64-79,
+Oscillator 1,Wave (CC 77),DWGS,77,80-95,DWGS waveform # is chosen with Control 2
+Oscillator 1,Wave (CC 77),Noise,77,96-111,
+Oscillator 1,Wave (CC 77),Audio In,77,112-127,
+Oscillator 1,Knob,Control 1,14,0-127,
+Oscillator 1,Knob,Control 2,15,0-127,When Wave=DWGS this selects the DWGS waveform number
+Oscillator 2,Wave (CC 78),Saw,78,0-42,
+Oscillator 2,Wave (CC 78),Square,78,43-85,Was 'PWM' - OSC2 wave 2 is Square; OSC2 has no PWM
+Oscillator 2,Wave (CC 78),Triangle,78,86-127,
+Oscillator 2,Osc Mod (CC 82),Off,82,0-31,Added - the selector also has an Off state
+Oscillator 2,Osc Mod (CC 82),Ring,82,32-63,
+Oscillator 2,Osc Mod (CC 82),Sync,82,64-95,
+Oscillator 2,Osc Mod (CC 82),Ring+Sync,82,96-127,Added - both lit = RingSync
+Oscillator 2,Knob,Semitone,18,0-127,Synth mode. SAME knob = Vocoder 'HPF Level' (CC 18)
+Oscillator 2,Knob,Tune,19,0-127,Synth mode. SAME knob = Vocoder 'Threshold' (CC 19)
+Oscillator 2,Knob (Vocoder),HPF Level,18,0-127,Vocoder mode of the Semitone knob (CC 18)
+Oscillator 2,Knob (Vocoder),Threshold,19,0-127,Vocoder mode of the Tune knob (CC 19)
+Mixer,Knob,Osc 1,20,0-127,
+Mixer,Knob,Osc 2 / Inst,21,0-127,OSC2 level (synth) / Inst level (vocoder) - same knob CC 21
+Mixer,Knob,Noise,22,0-127,
+Filter,Knob,Cutoff,74,0-127,Vocoder mode: also Cutoff (CC 74)
+Filter,Knob,Resonance,71,0-127,
+Filter,Knob,EG1 Int / FC Mod Int,79,0-127 (centre 64),EG1 Intensity (synth) / Filter-Mod Intensity (vocoder) - same knob CC 79
+Filter,Knob,KBD Track / E.F. Sense,85,0-127 (centre 64),Keyboard Track (synth) / E.F. Sense (vocoder) - same knob CC 85
+Filter,Type selector (CC 83),24LPF,83,0-31,Filter Type and Formant Shift are the SAME knob (CC 83)
+Filter,Type selector (CC 83),12LPF,83,32-63,
+Filter,Type selector (CC 83),12BPF,83,64-95,
+Filter,Type selector (CC 83),12HPF,83,96-127,
+Filter,Formant Shift selector (CC 83),0,83,0-25,Vocoder mode of the Filter Type knob (CC 83)
+Filter,Formant Shift selector (CC 83),+1,83,26-51,
+Filter,Formant Shift selector (CC 83),+2,83,52-76,
+Filter,Formant Shift selector (CC 83),-1,83,77-102,
+Filter,Formant Shift selector (CC 83),-2,83,103-127,
+Amp,Knob,Level,7,0-127,CC 7 is also standard MIDI Volume
+Amp,Knob,Pan / Direct Level,10,0-127 (centre 64),Pan (synth) / Direct Level (vocoder) - same knob CC 10
+Amp,Switch,EG 2 / Gate,86,0-63=EG2 / 64-127=Gate,Amp envelope source switch
+Amp,Switch,Distortion,92,0-63=Off / 64-127=On,
+Arpeggiator,Knob,Tempo,No,,No CC; set by SysEx or external MIDI Clock. Shared with Mod-Seq tempo
+Arpeggiator,Knob,Gate,No,NRPN 00 0A,Reachable by NRPN not CC
+Arpeggiator,Switch,On/Off,No,NRPN 00 02,Reachable by NRPN not CC
+Arpeggiator,Switch,Latch,No,NRPN 00 04,Reachable by NRPN not CC
+Arpeggiator,Range (NRPN 00 03),1 Octave,No,NRPN 00 03 = 0,
+Arpeggiator,Range (NRPN 00 03),2 Octave,No,NRPN 00 03 = 1,
+Arpeggiator,Range (NRPN 00 03),3 Octave,No,NRPN 00 03 = 2,
+Arpeggiator,Range (NRPN 00 03),4 Octave,No,NRPN 00 03 = 3,
+Arpeggiator,Type (NRPN 00 07),Up,No,NRPN 00 07,
+Arpeggiator,Type (NRPN 00 07),Down,No,NRPN 00 07,
+Arpeggiator,Type (NRPN 00 07),Alt 1,No,NRPN 00 07,
+Arpeggiator,Type (NRPN 00 07),Alt 2,No,NRPN 00 07,
+Arpeggiator,Type (NRPN 00 07),Random,No,NRPN 00 07,
+Arpeggiator,Type (NRPN 00 07),Trigger,No,NRPN 00 07,
+Octave,Button,Up,No,,Keyboard octave shift - no realtime CC (program byte via SysEx)
+Octave,Button,Down,No,,Keyboard octave shift - no realtime CC (program byte via SysEx)
+Timbre Select,Selector (CC 95),Timbre 1,95,0,Validated on this unit: CC 95 (Global 'TimbSel Ctrl No'). Value 0 = Timbre 1
+Timbre Select,Selector (CC 95),Timbre 1 & 2,95,1,Value 1 = both timbres
+Timbre Select,Selector (CC 95),Timbre 2,95,2-127,Value 2-127 = Timbre 2 (your unit sent 127)
+Mod Sequence,Switch,On/Off,89,0-63=Off / 64-127=On,The 'Sequencer on/off' CC
+Mod Sequence,Button,Rec,No,,Record-enable UI button - no CC
+Portamento,Knob,Time,5,0-127,
+LFO 1,Wave (CC 87),Saw,87,0-31,
+LFO 1,Wave (CC 87),Square,87,32-63,
+LFO 1,Wave (CC 87),Triangle,87,64-95,
+LFO 1,Wave (CC 87),S/H,87,96-127,
+LFO 1,Knob,Frequency,27,0-127,
+LFO 2,Wave (CC 88),Saw,88,0-31,
+LFO 2,Wave (CC 88),Square,88,32-63,Square(+)
+LFO 2,Wave (CC 88),Sine,88,64-95,Was 'Triangle' - LFO2 wave 3 is Sine (LFO1 has Triangle)
+LFO 2,Wave (CC 88),S/H,88,96-127,
+LFO 2,Knob,Frequency,76,0-127,
+Effects,Mod FX,Speed / Time,12,0-127,Mod FX LFO Speed
+Effects,Mod FX,Depth / Feedback,93,0-127,Mod FX Depth
+Effects,Delay FX,Speed / Time,13,0-127,Delay Time
+Effects,Delay FX,Depth / Feedback,94,0-127,Delay Depth
+Virtual Patch,Page select,Patch 1,No,,Selects which patch you are editing - no CC
+Virtual Patch,Page select,Patch 2,No,,Selects which patch you are editing - no CC
+Virtual Patch,Page select,Patch 3,No,,Selects which patch you are editing - no CC
+Virtual Patch,Page select,Patch 4,No,,Selects which patch you are editing - no CC
+Virtual Patch,Intensity,Patch 1,28,0-127 (centre 64),'Level' = Patch 1 Intensity
+Virtual Patch,Intensity,Patch 2,29,0-127 (centre 64),'Level' = Patch 2 Intensity
+Virtual Patch,Intensity,Patch 3,30,0-127 (centre 64),'Level' = Patch 3 Intensity
+Virtual Patch,Intensity,Patch 4,31,0-127 (centre 64),'Level' = Patch 4 Intensity
+Virtual Patch,Source (NRPN 04 00-03),EG 1,No,NRPN per patch,Source selector is NRPN not CC (one NRPN per patch)
+Virtual Patch,Source (NRPN 04 00-03),EG 2,No,NRPN per patch,
+Virtual Patch,Source (NRPN 04 00-03),LFO 1,No,NRPN per patch,
+Virtual Patch,Source (NRPN 04 00-03),LFO 2,No,NRPN per patch,
+Virtual Patch,Source (NRPN 04 00-03),Velocity,No,NRPN per patch,
+Virtual Patch,Source (NRPN 04 00-03),KBD Track,No,NRPN per patch,
+Virtual Patch,Source (NRPN 04 00-03),MIDI 1,No,NRPN per patch,Pitch Bend
+Virtual Patch,Source (NRPN 04 00-03),MIDI 2,No,NRPN per patch,Mod wheel
+Virtual Patch,Destination (NRPN 04 08-0B),Pitch,No,NRPN per patch,Destination selector is NRPN not CC
+Virtual Patch,Destination (NRPN 04 08-0B),Osc 2 Pitch,No,NRPN per patch,
+Virtual Patch,Destination (NRPN 04 08-0B),Osc 1 Ctrl 1,No,NRPN per patch,
+Virtual Patch,Destination (NRPN 04 08-0B),Noise Level,No,NRPN per patch,
+Virtual Patch,Destination (NRPN 04 08-0B),Cutoff,No,NRPN per patch,
+Virtual Patch,Destination (NRPN 04 08-0B),Amp,No,NRPN per patch,
+Virtual Patch,Destination (NRPN 04 08-0B),Pan,No,NRPN per patch,
+Virtual Patch,Destination (NRPN 04 08-0B),LFO 2 Freq,No,NRPN per patch,
+Seq Edit,Page select,Seq 1,No,,Mod-sequence lane select - no CC
+Seq Edit,Page select,Seq 2,No,,Mod-sequence lane select - no CC
+Seq Edit,Page select,Seq 3,No,,Mod-sequence lane select - no CC
+CH Param,Page select,Level,No,,Vocoder channel edit-select; band levels are NRPN 04 10+
+CH Param,Page select,Pan,No,,Vocoder channel edit-select; band pans are NRPN 04 20+
+EG 1 (Filter),Knob,Attack,23,0-127,
+EG 1 (Filter),Knob,Decay,24,0-127,Reordered to A-D-S-R
+EG 1 (Filter),Knob,Sustain,25,0-127,
+EG 1 (Filter),Knob,Release,26,0-127,
+EG 2 (Amp),Knob,Attack,73,0-127,Note: EG2 CCs are NOT sequential
+EG 2 (Amp),Knob,Decay,75,0-127,
+EG 2 (Amp),Knob,Sustain,70,0-127,
+EG 2 (Amp),Knob,Release,72,0-127,
+Bank,Button,Down,No,,Program/bank navigation (uses Program Change), not CC
+Bank,Button,Up,No,,Program/bank navigation (uses Program Change), not CC
+Edit Select Matrix,Page select,1 Common,No,,The 16 EDIT SELECT keys are LCD-page navigation - no CC
+Edit Select Matrix,Page select,2 Voice,No,,
+Edit Select Matrix,Page select,3 Pitch,No,,
+Edit Select Matrix,Page select,4 Osc 1,No,,
+Edit Select Matrix,Page select,5 Osc 2 / Audio In 2,No,,
+Edit Select Matrix,Page select,6 Filter,No,,
+Edit Select Matrix,Page select,7 Amp,No,,
+Edit Select Matrix,Page select,8 EG,No,,
+Edit Select Matrix,Page select,9 LFO,No,,
+Edit Select Matrix,Page select,10 Patch / CH Level,No,,
+Edit Select Matrix,Page select,11 Seq / CH Pan,No,,
+Edit Select Matrix,Page select,12 Mod FX,No,,
+Edit Select Matrix,Page select,13 Delay FX,No,,
+Edit Select Matrix,Page select,14 EQ,No,,EQ Hi/Lo gain are SysEx-only (no CC)
+Edit Select Matrix,Page select,15 Arpeggio,No,,
+Edit Select Matrix,Page select,16 Utility,No,,

@@ -1,0 +1,25 @@
+# Build output (CMake + fetched JUCE sources + binaries — hundreds of MB)
+/build/
+build*/
+
+# Compiled / linked artifacts
+*.exe
+*.obj
+*.o
+*.a
+*.lib
+*.dll
+*.vst3
+
+# Third-party reference material downloaded for development (not ours to ship;
+# includes Korg's MIDI Implementation text). The relevant facts are transcribed
+# into docs/MS2000_param_map.md.
+/docs/ref/
+
+# Editor / OS cruft
+.vs/
+.vscode/
+.idea/
+*.user
+.DS_Store
+Thumbs.db
