@@ -15,7 +15,9 @@ FetchContent_MakeAvailable(JUCE)
 
 juce_add_gui_app(MS2K_Interface
     PRODUCT_NAME "MS2K_Interface"
-    COMPANY_NAME "MS2K")
+    COMPANY_NAME "MS2K"
+    ICON_BIG   "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.png"
+    ICON_SMALL "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon-small.png")
 
 target_sources(MS2K_Interface PRIVATE
     Source/Main.cpp
@@ -64,6 +66,8 @@ juce_add_plugin(MS2K_Plugin
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT TRUE
     VST3_CATEGORIES "Fx" "Instrument"
+    ICON_BIG   "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.png"
+    ICON_SMALL "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon-small.png"
     COPY_PLUGIN_AFTER_BUILD FALSE)
 
 target_sources(MS2K_Plugin PRIVATE

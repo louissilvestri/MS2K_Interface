@@ -1,3 +1,5 @@
+<img src="resources/icon.png" width="104" align="right" alt="MS2K Interface icon"/>
+
 # MS2K_Interface — Korg MS2000 Editor / Librarian
 
 A native (JUCE) editor for the **Korg MS2000 (gen-1)** that *de-multiplexes* the hardware: the

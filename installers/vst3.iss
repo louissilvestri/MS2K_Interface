@@ -20,6 +20,7 @@ AppSupportURL={#AppURL}
 DefaultDirName={commoncf}\VST3\{#Bundle}
 DisableDirPage=yes
 DisableProgramGroupPage=yes
+SetupIconFile=..\resources\icon.ico
 PrivilegesRequired=admin
 UninstallDisplayName={#AppName}
 OutputDir=..\dist

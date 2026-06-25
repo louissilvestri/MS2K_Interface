@@ -1,0 +1,47 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b545c"/>
+      <stop offset="1" stop-color="#0e3338"/>
+    </linearGradient>
+    <radialGradient id="knob" cx="0.38" cy="0.30" r="0.85">
+      <stop offset="0" stop-color="#3c4146"/>
+      <stop offset="0.55" stop-color="#232629"/>
+      <stop offset="1" stop-color="#0b0c0d"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ff8c1a" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#ff8c1a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ledglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ff5a4a" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#e5392f" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- panel body (rounded square) -->
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#panel)"/>
+  <!-- rosewood end cheeks -->
+  <path d="M16 124 a108 108 0 0 1 108 -108 h0 v480 h0 a108 108 0 0 1 -108 -108 Z" fill="#5a3a26"/>
+  <path d="M496 124 a108 108 0 0 0 -108 -108 h0 v480 h0 a108 108 0 0 0 108 -108 Z" fill="#5a3a26"/>
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="none" stroke="#0b2b30" stroke-width="8"/>
+
+  <!-- amber glow behind the knob -->
+  <circle cx="256" cy="284" r="172" fill="url(#glow)"/>
+
+  <!-- red panel LED -->
+  <circle cx="256" cy="86" r="34" fill="url(#ledglow)"/>
+  <circle cx="256" cy="86" r="15" fill="#e5392f"/>
+  <circle cx="251" cy="81" r="5" fill="#ff9b90"/>
+
+  <!-- value arc: dim track + amber value -->
+  <path d="M147.3 395.7 A 158 158 0 1 1 364.7 395.7" fill="none" stroke="#0c2c30" stroke-width="24" stroke-linecap="round"/>
+  <path d="M147.3 395.7 A 158 158 0 0 1 256 126"      fill="none" stroke="#ff8c1a" stroke-width="24" stroke-linecap="round"/>
+
+  <!-- knob body -->
+  <circle cx="256" cy="284" r="118" fill="url(#knob)" stroke="#000000" stroke-width="4"/>
+  <circle cx="256" cy="284" r="118" fill="none" stroke="#4a5054" stroke-width="2" stroke-opacity="0.5"/>
+
+  <!-- white pointer (points up) -->
+  <line x1="256" y1="284" x2="256" y2="188" stroke="#f2f4f4" stroke-width="18" stroke-linecap="round"/>
+</svg>

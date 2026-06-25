@@ -19,6 +19,7 @@ AppSupportURL={#AppURL}
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
+SetupIconFile=..\resources\icon.ico
 UninstallDisplayIcon={app}\{#AppExe}
 ; Per-user by default (no UAC); the user may choose all-users on the wizard.
 PrivilegesRequired=lowest
