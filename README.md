@@ -98,3 +98,21 @@ Source/Main.cpp  standalone app
 docs/            MS2000_param_map.md, MS2K_Hardware_Controls.csv, demo_bank.syx
 tests/           unit tests (codec/model/messages) + hardware round-trips (verify_*.cpp)
 ```
+
+## Acknowledgments
+This project stands on prior MS2000 reverse-engineering and tooling:
+
+- **[mlazarev/midi](https://github.com/mlazarev/midi)** — a comprehensive MS2000 MIDI/SysEx
+  resource (decoder, analyzer, the transcribed Korg MIDI Implementation, offset-64 handling).
+  Its documentation was used to cross-check the SysEx layout and **confirm the Mod-Sequencer
+  byte offsets** (then re-verified against a real bank dump). Invaluable reference.
+- **[ReMS2000](https://github.com/inteyes/ReMS2000)** (inteyes) — the open-source Ctrlr-based
+  MS2000 editor that inspired the data-driven, single-table parameter model used here.
+- The **Korg MS2000/2000R MIDI Implementation** (Korg Inc.) — the authoritative spec the byte
+  maps in `docs/MS2000_param_map.md` are transcribed from.
+- **[RtMidi](https://github.com/thestk/rtmidi)** (Gary P. Scavone, MIT-style license, vendored
+  in `Source/midi/rtmidi/`) and **[JUCE](https://juce.com)** (fetched at build time).
+
+The code here is original; the projects above are credited as references/spec sources, not as
+copied code. MS2000 and Korg are trademarks of Korg Inc.; this is an unofficial, independent
+editor with no affiliation.
