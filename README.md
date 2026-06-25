@@ -75,6 +75,17 @@ Lives in the **Timbre-1 block, bytes 90–145** — confirmed against the Korg M
 5. **Save .syx** / **Load .syx** archive a bank. Test with no hardware via
    **Load .syx → `docs/demo_bank.syx`** (128 demo patches).
 
+## Install (Windows)
+After building (below) — or from a release bundle — double-click the installers in
+[`installers/`](installers/):
+- **`install-app.bat`** — installs the standalone editor to `%LOCALAPPDATA%\Programs` with
+  Start Menu + Desktop shortcuts (no admin needed).
+- **`install-vst3.bat`** — installs `MS2K Editor.vst3` into the system VST3 folder DAWs scan
+  (self-elevates for admin). Re-scan plug-ins in your DAW afterward.
+
+Both binaries are statically linked, so there's nothing else to install. See
+[`installers/README.md`](installers/README.md) for details and uninstall steps.
+
 ## Build
 The full app + plugin build with CMake + JUCE (fetched automatically):
 ```sh
