@@ -9,6 +9,11 @@ permanent, labeled control, driving the real synth over MIDI — as a **standalo
 Authoritative spec: [`docs/MS2000_param_map.md`](docs/MS2000_param_map.md) — byte-exact SysEx +
 CC/NRPN map, including the Mod-Sequencer layout (single source of truth for the code).
 
+![MS2K_Interface editor](docs/screenshots/editor-full.png)
+
+*The de-multiplexed editor: bank librarian (left), every parameter as its own labeled control,
+and the Mod-Sequencer panel along the bottom.*
+
 ## Control model (two paths)
 - **Real-time:** MIDI **CC** (assignable, factory default in the spec) + **NRPN** for arp,
   virtual-patch routing, and the 16 vocoder bands.
@@ -49,6 +54,8 @@ automation are recorded/played by the DAW and routed to the MS2000 from the trac
 | **VST3 plugin** — full automation, bidirectional sync, librarian | ✅ builds & runs in Reaper |
 
 ## Mod-Sequencer
+![Mod-Sequencer panel](docs/screenshots/mod-sequencer.png)
+
 3 lanes × 16 bipolar steps, each lane routed to one of 31 destinations with Smooth/Step
 motion, plus the common run controls (On, Resolution, Last Step, Type, Key Sync, Run Mode).
 Lives in the **Timbre-1 block, bytes 90–145** — confirmed against the Korg MIDI Implementation
