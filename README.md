@@ -76,15 +76,15 @@ Lives in the **Timbre-1 block, bytes 90–145** — confirmed against the Korg M
    **Load .syx → `docs/demo_bank.syx`** (128 demo patches).
 
 ## Install (Windows)
-After building (below) — or from a release bundle — double-click the installers in
-[`installers/`](installers/):
-- **`install-app.bat`** — installs the standalone editor to `%LOCALAPPDATA%\Programs` with
-  Start Menu + Desktop shortcuts (no admin needed).
-- **`install-vst3.bat`** — installs `MS2K Editor.vst3` into the system VST3 folder DAWs scan
-  (self-elevates for admin). Re-scan plug-ins in your DAW afterward.
+**No build required** — grab the self-contained installers from the
+[**Releases**](https://github.com/louissilvestri/MS2K_Interface/releases) page and double-click:
+- **`MS2K_Interface-x.y.z-Setup.exe`** — the standalone editor (per-user, no admin; Start Menu
+  + optional Desktop shortcut).
+- **`MS2K-Editor-VST3-x.y.z-Setup.exe`** — the VST3 plugin, into the system VST3 folder your
+  DAW scans (elevates for admin). Re-scan plug-ins in your DAW afterward.
 
-Both binaries are statically linked, so there's nothing else to install. See
-[`installers/README.md`](installers/README.md) for details and uninstall steps.
+Both bundle the statically-linked binaries and register a normal uninstaller. The installer
+*sources* (Inno Setup) live in [`installers/`](installers/).
 
 ## Build
 The full app + plugin build with CMake + JUCE (fetched automatically):

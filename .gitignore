@@ -2,6 +2,9 @@
 /build/
 build*/
 
+# Compiled installers (the .iss scripts are tracked; the built .exe go to Releases)
+/dist/
+
 # Compiled / linked artifacts
 *.exe
 *.obj
