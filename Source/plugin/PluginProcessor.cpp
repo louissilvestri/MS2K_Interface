@@ -61,13 +61,33 @@ void addRaw(juce::MidiBuffer& buf, const Bytes& b, int sample) {
 }
 } // namespace
 
+// ---- diagnostic log --------------------------------------------------------
+static juce::File logFile() {
+    auto dir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                   .getChildFile("MS2K_Interface");
+    dir.createDirectory();
+    return dir.getChildFile("ms2k_vst.log");
+}
+juce::String MS2KAudioProcessor::logFilePath() const { return logFile().getFullPathName(); }
+void MS2KAudioProcessor::logMsg(const juce::String& s) {
+    if (log_) log_->logMessage(juce::Time::getCurrentTime().toString(false, true, true, true) + "  " + s);
+}
+static juce::String hexHead(const uint8_t* d, int n, int maxB = 12) {
+    juce::String s;
+    for (int i = 0; i < juce::jmin(n, maxB); ++i)
+        s += juce::String::toHexString((int)d[i]).paddedLeft('0', 2) + " ";
+    return s.trim();
+}
+
 // ---- construction ----------------------------------------------------------
 MS2KAudioProcessor::MS2KAudioProcessor()
     : juce::AudioProcessor(BusesProperties()) {   // MIDI effect: no audio buses
+    log_.reset(new juce::FileLogger(logFile(), "==== MS2K VST loaded ===="));
     buildParams();
 }
 
 MS2KAudioProcessor::~MS2KAudioProcessor() {
+    logMsg("plugin unloaded");
     for (auto& d : defs_) if (d.param) d.param->removeListener(this);
 }
 
@@ -188,10 +208,30 @@ void MS2KAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         const bool startsSysex = (n > 0 && raw[0] == 0xF0);
 
         if (!sysexAccum_.empty() || startsSysex) {
-            if (startsSysex && !sysexAccum_.empty()) sysexAccum_.clear(); // new dump began
+            if (startsSysex && !sysexAccum_.empty()) {
+                logMsg("SYSEX: new F0 while " + juce::String((int)sysexAccum_.size()) + " B pending - resetting");
+                sysexAccum_.clear();
+            }
+            if (sysexAccum_.empty()) {                        // first fragment of a dump
+                sysexFrags_ = 0; sysexLogged_ = 0;
+                logMsg("SYSEX start: n=" + juce::String(n) + " head=[" + hexHead(raw, n) + "]");
+            }
             sysexAccum_.insert(sysexAccum_.end(), raw, raw + n);
-            if (sysexAccum_.back() == 0xF7) { handleIncomingBytes(sysexAccum_); sysexAccum_.clear(); }
-            else if (sysexAccum_.size() > 300000) sysexAccum_.clear();    // runaway guard
+            ++sysexFrags_;
+            if (sysexAccum_.size() - sysexLogged_ >= 4096) {  // progress, not every fragment
+                logMsg("SYSEX accum=" + juce::String((int)sysexAccum_.size()) + " B, frags=" + juce::String(sysexFrags_));
+                sysexLogged_ = sysexAccum_.size();
+            }
+            if (sysexAccum_.back() == 0xF7) {
+                logMsg("SYSEX complete: total=" + juce::String((int)sysexAccum_.size()) +
+                       " B, frags=" + juce::String(sysexFrags_) + ", tail=[" +
+                       hexHead(sysexAccum_.data() + juce::jmax(0, (int)sysexAccum_.size() - 6), juce::jmin(6, (int)sysexAccum_.size())) + "]");
+                handleIncomingBytes(sysexAccum_);
+                sysexAccum_.clear();
+            } else if (sysexAccum_.size() > 300000) {
+                logMsg("SYSEX runaway reset at " + juce::String((int)sysexAccum_.size()) + " B");
+                sysexAccum_.clear();
+            }
             continue;
         }
         if (listening && m.isController() && m.getChannel() == ch + 1) {
@@ -201,10 +241,14 @@ void MS2KAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         out.addEvent(m, meta.samplePosition);
     }
 
-    if (wantRequest_.exchange(false))
+    if (wantRequest_.exchange(false)) {
         addRaw(out, makeRequest(Func::CurrentProgramDumpRequest, (uint8_t)ch), 0);
-    if (wantBankRequest_.exchange(false))
+        logMsg("-> sent Current Program request (0x10) on ch " + juce::String(ch + 1));
+    }
+    if (wantBankRequest_.exchange(false)) {
         addRaw(out, makeRequest(Func::ProgramDumpRequest, (uint8_t)ch), 0);
+        logMsg("-> sent All Programs request (0x1C) on ch " + juce::String(ch + 1));
+    }
 
     if (anyDirty_.exchange(false)) {
         for (int i = 0; i < dirtyN_; ++i) {
@@ -236,13 +280,18 @@ void MS2KAudioProcessor::handleIncomingBytes(const Bytes& full) {
         std::array<uint8_t, kProgramSize> a{}; std::copy_n(b.begin(), kProgramSize, a.begin()); return Program(a);
     };
     if (auto prog = parseProgramDump(full)) {
+        logMsg("PARSE ok: single program (Get Current)");
         const juce::ScopedLock sl(incomingLock_);
         incomingProg_ = toProgram(*prog); hasIncoming_ = true;
     } else if (auto bank = parseBankDump(full)) {
+        logMsg("PARSE ok: BANK of " + juce::String((int)bank->size()) + " programs");
         std::vector<Program> progs; progs.reserve(bank->size());
         for (const auto& b : *bank) progs.push_back(toProgram(b));
         const juce::ScopedLock sl(incomingLock_);
         incomingBank_ = std::move(progs); hasIncomingBank_ = true;
+    } else {
+        logMsg("PARSE FAILED: len=" + juce::String((int)full.size()) +
+               " head=[" + hexHead(full.data(), (int)full.size()) + "]");
     }
 }
 

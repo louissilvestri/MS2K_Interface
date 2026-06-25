@@ -56,7 +56,7 @@ MS2KPluginEditor::MS2KPluginEditor(MS2KAudioProcessor& p)
     // ---- librarian sidebar ----
     addChildComponent(getAllBtn_);
     getAllBtn_.setButtonText("Get All Patches");
-    getAllBtn_.onClick = [this] { proc_.requestAllPrograms(); };
+    getAllBtn_.onClick = [this] { proc_.logMsg("[UI] Get All Patches clicked"); proc_.requestAllPrograms(); };
     addChildComponent(loadBtn_);
     loadBtn_.setButtonText("Load .syx");
     loadBtn_.onClick = [this] { loadSyxFile(); };
@@ -138,8 +138,10 @@ void MS2KPluginEditor::timerCallback() {
     std::vector<Program> incBank;
     if (proc_.takeIncomingBank(incBank)) {       // synth replied to "Get All"
         bank_ = std::move(incBank);
+        proc_.logMsg("[UI] bank received -> populating list with " + juce::String((int)bank_.size()) + " rows");
         bankList_.updateContent();
         bankList_.repaint();
+        if (!bankVisible_) { bankVisible_ = true; bankBtn_.setToggleState(true, juce::dontSendNotification); resized(); }
     }
     if (proc_.takeIncoming(inc)) {                // synth replied to "Get Current"
         editProg_ = inc;
