@@ -93,7 +93,7 @@ private:
     void parameterGestureChanged(int, bool) override {}
     void buildParams();
     void emitParamMidi(const Def&, int raw, int ch, juce::MidiBuffer&, int sample);
-    void handleIncoming(const juce::MidiMessage&);
+    void handleIncomingBytes(const Bytes& fullSysex); // parse a reassembled dump
     void handleSynthCC(uint8_t cc, uint8_t value);   // decode one CC from the synth
     void applyParamFromSynth(int defIndex, int raw); // set param without echoing back
 
@@ -116,6 +116,7 @@ private:
     int    samplesSinceDump_ = 1 << 20;
     double sampleRate_ = 44100.0;
     int    nrpnMsb_ = -1, nrpnLsb_ = -1;    // NRPN decode state (audio thread only)
+    std::vector<uint8_t> sysexAccum_;       // reassembles a dump split across blocks
 
     juce::CriticalSection incomingLock_;
     Program incomingProg_;

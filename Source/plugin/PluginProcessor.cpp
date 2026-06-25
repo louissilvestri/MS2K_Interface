@@ -176,10 +176,24 @@ void MS2KAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     // Pass through anything that isn't ours; consume SysEx (synth dump replies)
     // and, when listening, the synth's CC/NRPN (so knob moves sync the UI and
     // don't echo straight back out).
+    //
+    // A bank dump (~37 KB, ~12 s over DIN) reaches the plugin as SysEx fragments
+    // spread across many process blocks, so reassemble until the closing F7
+    // before parsing — exactly as the standalone's MidiEngine does.
     const bool listening = listening_.load();
     for (const auto meta : midi) {
         const auto m = meta.getMessage();
-        if (m.isSysEx()) { handleIncoming(m); continue; }
+        const uint8_t* raw = m.getRawData();
+        const int n = m.getRawDataSize();
+        const bool startsSysex = (n > 0 && raw[0] == 0xF0);
+
+        if (!sysexAccum_.empty() || startsSysex) {
+            if (startsSysex && !sysexAccum_.empty()) sysexAccum_.clear(); // new dump began
+            sysexAccum_.insert(sysexAccum_.end(), raw, raw + n);
+            if (sysexAccum_.back() == 0xF7) { handleIncomingBytes(sysexAccum_); sysexAccum_.clear(); }
+            else if (sysexAccum_.size() > 300000) sysexAccum_.clear();    // runaway guard
+            continue;
+        }
         if (listening && m.isController() && m.getChannel() == ch + 1) {
             handleSynthCC((uint8_t)m.getControllerNumber(), (uint8_t)m.getControllerValue());
             continue;
@@ -217,11 +231,7 @@ void MS2KAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     midi.swapWith(out);
 }
 
-void MS2KAudioProcessor::handleIncoming(const juce::MidiMessage& m) {
-    Bytes full; full.reserve((size_t)m.getSysExDataSize() + 2);
-    full.push_back(0xF0);
-    full.insert(full.end(), m.getSysExData(), m.getSysExData() + m.getSysExDataSize());
-    full.push_back(0xF7);
+void MS2KAudioProcessor::handleIncomingBytes(const Bytes& full) {
     auto toProgram = [](const Bytes& b) {
         std::array<uint8_t, kProgramSize> a{}; std::copy_n(b.begin(), kProgramSize, a.begin()); return Program(a);
     };
