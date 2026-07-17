@@ -80,10 +80,6 @@ public:
     void requestAllPrograms()     { wantBankRequest_ = true; }
     void forceFullDump()          { wantForceDump_ = true; }
 
-    // Diagnostic log file (see ctor for path). Thread-safe; callable from UI too.
-    void logMsg(const juce::String&);
-    juce::String logFilePath() const;
-
     // Live "knob on the synth -> control in the plugin" sync. When on, the
     // plugin decodes incoming CC/NRPN from the synth and consumes it (so it is
     // not echoed back out). Off = incoming CC passes through untouched.
@@ -134,10 +130,6 @@ private:
     double sampleRate_ = 44100.0;
     int    nrpnMsb_ = -1, nrpnLsb_ = -1;    // NRPN decode state (audio thread only)
     std::vector<uint8_t> sysexAccum_;       // reassembles a dump split across blocks
-    int    sysexFrags_ = 0;                 // fragments in the current dump (logging)
-    size_t sysexLogged_ = 0;                // last accumulated size we logged
-
-    std::unique_ptr<juce::FileLogger> log_;
 
     juce::CriticalSection incomingLock_;
     Program incomingProg_;
