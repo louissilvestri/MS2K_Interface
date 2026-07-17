@@ -76,11 +76,17 @@ This project stands on prior MS2000 reverse‑engineering and tooling:
   editor that inspired the data‑driven, single‑table parameter model used here.
 - The **Korg MS2000/2000R MIDI Implementation** (Korg Inc.) — the authoritative spec the byte
   maps are transcribed from.
-- **[RtMidi](https://github.com/thestk/rtmidi)** (Gary P. Scavone) and
-  **[JUCE](https://juce.com)**.
+This project also **builds on third‑party code**, each under its own license:
+- **[RtMidi](https://github.com/thestk/rtmidi)** (Gary P. Scavone) — **vendored** (copied) into
+  `Source/midi/rtmidi/`, under its MIT‑style license; provides the direct hardware MIDI I/O.
+- **[JUCE](https://juce.com)** — the GUI/audio framework the app is built on (fetched at build
+  time; under the JUCE license).
 
-The code here is original; the projects above are credited as references/spec sources, not as
-copied code.
+The **first‑party source** in this repo — the parameter model, SysEx codec, MIDI‑message
+builders, UI, standalone app, and VST3 plugin — is original work. RtMidi and JUCE are
+third‑party components under their own licenses (see **License** below). Only the
+**mlazarev/midi**, **ReMS2000**, and **Korg MIDI Implementation** entries above are
+references/spec sources rather than copied code.
 
 ## License
 This project's source is released under the **MIT License** — see [LICENSE](LICENSE).

@@ -343,7 +343,7 @@ private:
     void setupCombo(juce::ComboBox& box, const juce::StringArray& items, const juce::String& placeholder) {
         addAndMakeVisible(box);
         box.setTextWhenNothingSelected(placeholder);
-        box.addItem("— none —", 1);
+        box.addItem("(none)", 1);
         int id = 2;
         for (auto& it : items) box.addItem(it, id++);
     }
