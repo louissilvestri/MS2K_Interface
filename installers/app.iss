@@ -4,7 +4,7 @@
 ; Build:  "ISCC.exe" installers\app.iss   (output -> dist\)
 
 #define AppName "MS2K Interface"
-#define AppVersion "1.0.0"
+#define AppVersion "1.1.0"
 #define AppPublisher "Lou Silvestri"
 #define AppURL "https://github.com/louissilvestri/MS2K_Interface"
 #define AppExe "MS2K_Interface.exe"

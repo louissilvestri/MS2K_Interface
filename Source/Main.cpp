@@ -393,7 +393,7 @@ public:
 class MS2KApp : public juce::JUCEApplication {
 public:
     const juce::String getApplicationName() override { return "MS2K_Interface"; }
-    const juce::String getApplicationVersion() override { return "0.1.0"; }
+    const juce::String getApplicationVersion() override { return "1.1.0"; }
     void initialise(const juce::String&) override {
         juce::LookAndFeel::setDefaultLookAndFeel(&laf_);
         window_ = std::make_unique<MainWindow>();

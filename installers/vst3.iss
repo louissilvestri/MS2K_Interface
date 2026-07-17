@@ -4,7 +4,7 @@
 ; elevates). Build:  "ISCC.exe" installers\vst3.iss   (output -> dist\)
 
 #define AppName "MS2K Editor (VST3)"
-#define AppVersion "1.0.0"
+#define AppVersion "1.1.0"
 #define AppPublisher "Lou Silvestri"
 #define AppURL "https://github.com/louissilvestri/MS2K_Interface"
 #define Bundle "MS2K Editor.vst3"
