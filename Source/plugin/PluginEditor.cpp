@@ -16,7 +16,7 @@ MS2KPluginEditor::MS2KPluginEditor(MS2KAudioProcessor& p)
     addChildComponent(*modSeq_);
     modSeq_->setVisible(modSeqVisible_);
 
-    title_.setText("MS2000  \xe2\x80\xa2  Editor (VST3)", juce::dontSendNotification);
+    title_.setText("MS2000 Editor (VST3)", juce::dontSendNotification);
     title_.setColour(juce::Label::textColourId, juce::Colour(Palette::textLight));
     title_.setFont(juce::Font(14.0f, juce::Font::bold));
     addAndMakeVisible(title_);
@@ -30,7 +30,7 @@ MS2KPluginEditor::MS2KPluginEditor(MS2KAudioProcessor& p)
     // "— none —"; the rest are the RtMidi input ports (id = index + 2).
     addAndMakeVisible(midiInBox_);
     midiInBox_.setTextWhenNothingSelected("MIDI In (for Get All)");
-    midiInBox_.addItem("\xe2\x80\x94 none \xe2\x80\x94", 1);
+    midiInBox_.addItem("(none)", 1);
     { int id = 2; for (auto& n : proc_.midiInputNames()) midiInBox_.addItem(n, id++); }
     { const int idx = proc_.midiInputNames().indexOf(proc_.midiInputName());
       midiInBox_.setSelectedId(idx >= 0 ? idx + 2 : 1, juce::dontSendNotification); }
