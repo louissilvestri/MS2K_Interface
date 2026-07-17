@@ -317,7 +317,7 @@ private:
     }
 
     void saveSyxFile() {
-        if (bank_.empty()) { setStatus("No bank to save — Get All Patches or load a .syx first."); return; }
+        if (bank_.empty()) { setStatus("No bank to save - Get All Patches or load a .syx first."); return; }
         fileChooser_ = std::make_unique<juce::FileChooser>("Save bank as .syx",
             juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("MS2000_bank.syx"),
             "*.syx");
