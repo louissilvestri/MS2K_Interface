@@ -26,6 +26,16 @@ MS2KPluginEditor::MS2KPluginEditor(MS2KAudioProcessor& p)
     channelBox_.setSelectedId(proc_.channel() + 1, juce::dontSendNotification);
     channelBox_.onChange = [this] { proc_.setChannel(channelBox_.getSelectedId() - 1); };
 
+    // Direct MIDI input for receiving dumps + Listen (bypasses the DAW). Item 1 =
+    // "— none —"; the rest are the RtMidi input ports (id = index + 2).
+    addAndMakeVisible(midiInBox_);
+    midiInBox_.setTextWhenNothingSelected("MIDI In (for Get All)");
+    midiInBox_.addItem("\xe2\x80\x94 none \xe2\x80\x94", 1);
+    { int id = 2; for (auto& n : proc_.midiInputNames()) midiInBox_.addItem(n, id++); }
+    { const int idx = proc_.midiInputNames().indexOf(proc_.midiInputName());
+      midiInBox_.setSelectedId(idx >= 0 ? idx + 2 : 1, juce::dontSendNotification); }
+    midiInBox_.onChange = [this] { proc_.openMidiInput(midiInBox_.getSelectedId() - 2); };
+
     addAndMakeVisible(getBtn_);
     getBtn_.setButtonText("Get Current");
     getBtn_.onClick = [this] { proc_.requestCurrentProgram(); };
@@ -68,7 +78,7 @@ MS2KPluginEditor::MS2KPluginEditor(MS2KAudioProcessor& p)
     bankList_.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff0e3236));
     addChildComponent(bankList_);
 
-    hint_.setText("Route this track's MIDI out to the MS2000. Edits & automation are sent as MIDI; loading a patch sends it.",
+    hint_.setText("Route this track's MIDI out to the MS2000. For Get All / Get Current / Listen, set 'MIDI In' to the synth's port (disable that input in the DAW first).",
                   juce::dontSendNotification);
     hint_.setColour(juce::Label::textColourId, juce::Colour(Palette::textValue));
     hint_.setFont(juce::Font(11.0f, juce::Font::plain));
@@ -239,12 +249,13 @@ void MS2KPluginEditor::resized() {
     auto top = r.removeFromTop(kTopH).reduced(6, 6);
     title_.setBounds(top.removeFromLeft(170));
     auto place = [&top](juce::Component& c, int w) { c.setBounds(top.removeFromLeft(w)); top.removeFromLeft(6); };
-    place(channelBox_, 64);
-    place(getBtn_, 96);
-    place(sendBtn_, 78);
-    place(listenBtn_, 116);
-    place(bankBtn_, 60);
-    place(seqBtn_, 84);
+    place(channelBox_, 60);
+    place(midiInBox_, 150);
+    place(getBtn_, 92);
+    place(sendBtn_, 74);
+    place(listenBtn_, 112);
+    place(bankBtn_, 56);
+    place(seqBtn_, 80);
 
     hint_.setBounds(r.removeFromBottom(kStatusH).reduced(4, 2));
 

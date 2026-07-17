@@ -54,8 +54,10 @@ if (MINGW)
 endif()
 
 # ---- VST3 plugin (MIDI effect) for DAW automation ----
-# Shares the model/MIDI-message/UI code, but emits MIDI on the host's output bus
-# instead of opening a hardware port (so no RtMidi / MidiEngine here).
+# Emits MIDI on the host's output bus for edits/automation, and ALSO opens an
+# optional direct hardware MIDI input (RtMidi) so patch dumps + live sync can be
+# received straight from the synth — hosts like Reaper don't route input SysEx to
+# track FX. (No RtMidi *output* here; requests still go out the host bus.)
 juce_add_plugin(MS2K_Plugin
     PRODUCT_NAME "MS2K Editor"
     COMPANY_NAME "MS2K"
@@ -76,6 +78,7 @@ target_sources(MS2K_Plugin PRIVATE
     Source/model/ParameterModel.cpp
     Source/midi/SysexCodec.cpp
     Source/midi/MidiMessages.cpp
+    Source/midi/rtmidi/RtMidi.cpp
     Source/ui/Components.cpp
     Source/ui/ModSeqPanel.cpp
     Source/ui/MS2000LookAndFeel.cpp)
@@ -84,6 +87,9 @@ target_compile_definitions(MS2K_Plugin PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0)
+
+# RtMidi: Windows MultiMedia (winmm) backend for the direct hardware MIDI input.
+target_compile_definitions(MS2K_Plugin PRIVATE __WINDOWS_MM__=1)
 
 target_link_libraries(MS2K_Plugin PRIVATE
     juce::juce_audio_processors
@@ -95,6 +101,7 @@ target_link_libraries(MS2K_Plugin PRIVATE
 
 if (MINGW)
     target_link_options(MS2K_Plugin PRIVATE -static -static-libgcc -static-libstdc++)
+    target_link_libraries(MS2K_Plugin PRIVATE winmm) # RtMidi winmm backend
 endif()
 
 # ---- standalone unit tests for the pure-C++ core (no JUCE) ----

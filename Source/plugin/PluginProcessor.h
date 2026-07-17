@@ -22,6 +22,8 @@
 #include "../midi/MidiMessages.h"
 #include "../midi/SysexCodec.h"
 
+class RtMidiIn; // vendored RtMidi (global namespace)
+
 namespace ms2000 {
 
 class MS2KAudioProcessor : public juce::AudioProcessor,
@@ -92,13 +94,24 @@ public:
     bool takeIncoming(Program& out);                 // single program (Get Current)
     bool takeIncomingBank(std::vector<Program>& out); // 128-program bank (Get All)
 
+    // ---- direct hardware MIDI input (RtMidi) ----
+    // Reaper and some hosts don't route input SysEx to a track's FX chain, so the
+    // plugin opens the synth's MIDI *input* port itself to receive dumps + live
+    // CC. Requires the DAW NOT to hold that input open (Windows MIDI inputs are
+    // exclusive). Requests still go out the host bus; only receiving is direct.
+    juce::StringArray midiInputNames() const;
+    bool         openMidiInput(int index);           // index into midiInputNames(); -1 = close
+    juce::String midiInputName() const { return selectedInputName_; }
+    void onRtInput(const std::vector<unsigned char>& bytes); // called on the RtMidi thread
+
 private:
     void parameterValueChanged(int index, float newValue) override;
     void parameterGestureChanged(int, bool) override {}
     void buildParams();
     void emitParamMidi(const Def&, int raw, int ch, juce::MidiBuffer&, int sample);
     void handleIncomingBytes(const Bytes& fullSysex); // parse a reassembled dump
-    void handleSynthCC(uint8_t cc, uint8_t value);   // decode one CC from the synth
+    void handleSynthCC(uint8_t cc, uint8_t value);   // decode one CC from the synth (bus path)
+    void decodeSynthCcToQueue(uint8_t cc, uint8_t value); // RtMidi thread -> rtCcQueue_
     void applyParamFromSynth(int defIndex, int raw); // set param without echoing back
 
     std::vector<Def> defs_;
@@ -136,6 +149,16 @@ private:
     Program pendingFull_;
     bool    hasPendingFull_  = false;
     bool    pendingFullSend_ = false;
+
+    // Direct RtMidi input (opened by openMidiInput). Callback runs on the RtMidi
+    // thread: SysEx -> handleIncomingBytes (lock-safe); CC (when listening) ->
+    // rtCcQueue_, drained in processBlock so params update on the audio thread.
+    std::unique_ptr<RtMidiIn> midiIn_;
+    juce::String selectedInputName_;
+    std::vector<uint8_t> rtSysex_;           // reassembly buffer (RtMidi thread only)
+    int rtNrpnMsb_ = -1, rtNrpnLsb_ = -1;    // NRPN decode state (RtMidi thread only)
+    juce::CriticalSection rtCcLock_;
+    std::vector<std::pair<int,int>> rtCcQueue_; // (defIndex, raw) from the synth
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MS2KAudioProcessor)
 };
