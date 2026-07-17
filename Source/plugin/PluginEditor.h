@@ -46,7 +46,7 @@ private:
     std::unique_ptr<ModSeqPanel>  modSeq_;
     juce::Viewport viewport_;
 
-    juce::ComboBox   channelBox_;
+    juce::ComboBox   channelBox_, midiInBox_;
     juce::TextButton getBtn_, sendBtn_, seqBtn_, bankBtn_;
     juce::ToggleButton listenBtn_;
     juce::Label      title_, hint_;

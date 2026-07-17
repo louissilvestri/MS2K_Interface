@@ -1,7 +1,13 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "../midi/rtmidi/RtMidi.h"
 
 namespace ms2000 {
+
+// RtMidi input callback -> processor (runs on the RtMidi thread).
+static void rtInCallback(double, std::vector<unsigned char>* msg, void* user) {
+    if (msg && user) static_cast<MS2KAudioProcessor*>(user)->onRtInput(*msg);
+}
 
 // ---- Def: program byte <-> raw value ---------------------------------------
 void MS2KAudioProcessor::Def::applyRaw(Program& p, int raw) const {
@@ -61,34 +67,79 @@ void addRaw(juce::MidiBuffer& buf, const Bytes& b, int sample) {
 }
 } // namespace
 
-// ---- diagnostic log --------------------------------------------------------
-static juce::File logFile() {
-    auto dir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-                   .getChildFile("MS2K_Interface");
-    dir.createDirectory();
-    return dir.getChildFile("ms2k_vst.log");
-}
-juce::String MS2KAudioProcessor::logFilePath() const { return logFile().getFullPathName(); }
-void MS2KAudioProcessor::logMsg(const juce::String& s) {
-    if (log_) log_->logMessage(juce::Time::getCurrentTime().toString(false, true, true, true) + "  " + s);
-}
-static juce::String hexHead(const uint8_t* d, int n, int maxB = 12) {
-    juce::String s;
-    for (int i = 0; i < juce::jmin(n, maxB); ++i)
-        s += juce::String::toHexString((int)d[i]).paddedLeft('0', 2) + " ";
-    return s.trim();
-}
-
 // ---- construction ----------------------------------------------------------
 MS2KAudioProcessor::MS2KAudioProcessor()
     : juce::AudioProcessor(BusesProperties()) {   // MIDI effect: no audio buses
-    log_.reset(new juce::FileLogger(logFile(), "==== MS2K VST loaded ===="));
+    try {
+        midiIn_ = std::make_unique<RtMidiIn>();
+        midiIn_->ignoreTypes(false, true, true);  // receive SysEx; ignore timing/active-sensing
+        midiIn_->setCallback(&rtInCallback, this);
+    } catch (RtMidiError&) { midiIn_.reset(); }
     buildParams();
 }
 
 MS2KAudioProcessor::~MS2KAudioProcessor() {
-    logMsg("plugin unloaded");
+    if (midiIn_) { try { midiIn_->cancelCallback(); midiIn_->closePort(); } catch (RtMidiError&) {} }
     for (auto& d : defs_) if (d.param) d.param->removeListener(this);
+}
+
+// ---- direct hardware MIDI input --------------------------------------------
+juce::StringArray MS2KAudioProcessor::midiInputNames() const {
+    juce::StringArray names;
+    if (midiIn_) try { for (unsigned i = 0; i < midiIn_->getPortCount(); ++i)
+                           names.add(midiIn_->getPortName(i)); }
+                 catch (RtMidiError&) {}
+    return names;
+}
+
+bool MS2KAudioProcessor::openMidiInput(int index) {
+    if (!midiIn_) return false;
+    try {
+        if (midiIn_->isPortOpen()) midiIn_->closePort();
+        { const juce::ScopedLock sl(rtCcLock_); rtCcQueue_.clear(); }
+        rtSysex_.clear(); rtNrpnMsb_ = rtNrpnLsb_ = -1;
+        if (index < 0) { selectedInputName_.clear(); return true; }
+        midiIn_->openPort((unsigned)index);
+        selectedInputName_ = midiIn_->getPortName((unsigned)index);
+        return midiIn_->isPortOpen();
+    } catch (RtMidiError&) { return false; }
+}
+
+// Incoming bytes on the RtMidi thread: reassemble SysEx dumps; decode live CC.
+void MS2KAudioProcessor::onRtInput(const std::vector<unsigned char>& bytes) {
+    if (bytes.empty()) return;
+    const uint8_t status = bytes[0];
+    if (!rtSysex_.empty() || status == 0xF0) {                 // SysEx (re)assembly
+        rtSysex_.insert(rtSysex_.end(), bytes.begin(), bytes.end());
+        if (rtSysex_.back() == 0xF7) {
+            handleIncomingBytes(Bytes(rtSysex_.begin(), rtSysex_.end())); // lock-safe
+            rtSysex_.clear();
+        } else if (rtSysex_.size() > 300000) rtSysex_.clear();  // runaway guard
+        return;
+    }
+    if ((status & 0xF0) == 0xB0 && bytes.size() >= 3 && listening_.load()
+        && (int)(status & 0x0F) == channel_.load())
+        decodeSynthCcToQueue(bytes[1], bytes[2]);
+}
+
+// Decode a CC/NRPN from the synth into (defIndex, raw) and queue it for the
+// audio thread (which applies it without echoing back). RtMidi thread only.
+void MS2KAudioProcessor::decodeSynthCcToQueue(uint8_t cc, uint8_t value) {
+    int def = -1, raw = 0;
+    if (cc == 99) { rtNrpnMsb_ = value; return; }
+    if (cc == 98) { rtNrpnLsb_ = value; return; }
+    if (cc == 6) {                                             // NRPN data entry MSB
+        if (rtNrpnMsb_ >= 0 && rtNrpnLsb_ >= 0) {
+            auto it = nrpnRecv_.find((rtNrpnMsb_ << 8) | rtNrpnLsb_);
+            if (it != nrpnRecv_.end() && defs_[(size_t)it->second].spec) {
+                def = it->second; raw = rawFromCcValue(*defs_[(size_t)def].spec, value); }
+        }
+    } else if (cc != 38) {                                     // 38 = data entry LSB (ignored)
+        auto it = ccRecv_.find(cc);
+        if (it != ccRecv_.end() && defs_[(size_t)it->second].spec) {
+            def = it->second; raw = rawFromCcValue(*defs_[(size_t)def].spec, value); }
+    }
+    if (def >= 0) { const juce::ScopedLock sl(rtCcLock_); rtCcQueue_.emplace_back(def, raw); }
 }
 
 void MS2KAudioProcessor::buildParams() {
@@ -193,6 +244,14 @@ void MS2KAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         }
     }
 
+    // Apply CC/NRPN received on the direct RtMidi input (Listen), on the audio
+    // thread so audioProg_/params update without echoing back to the synth.
+    {
+        std::vector<std::pair<int,int>> updates;
+        { const juce::ScopedLock sl(rtCcLock_); updates.swap(rtCcQueue_); }
+        for (const auto& u : updates) applyParamFromSynth(u.first, u.second);
+    }
+
     // Pass through anything that isn't ours; consume SysEx (synth dump replies)
     // and, when listening, the synth's CC/NRPN (so knob moves sync the UI and
     // don't echo straight back out).
@@ -208,30 +267,10 @@ void MS2KAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         const bool startsSysex = (n > 0 && raw[0] == 0xF0);
 
         if (!sysexAccum_.empty() || startsSysex) {
-            if (startsSysex && !sysexAccum_.empty()) {
-                logMsg("SYSEX: new F0 while " + juce::String((int)sysexAccum_.size()) + " B pending - resetting");
-                sysexAccum_.clear();
-            }
-            if (sysexAccum_.empty()) {                        // first fragment of a dump
-                sysexFrags_ = 0; sysexLogged_ = 0;
-                logMsg("SYSEX start: n=" + juce::String(n) + " head=[" + hexHead(raw, n) + "]");
-            }
+            if (startsSysex && !sysexAccum_.empty()) sysexAccum_.clear(); // new dump began
             sysexAccum_.insert(sysexAccum_.end(), raw, raw + n);
-            ++sysexFrags_;
-            if (sysexAccum_.size() - sysexLogged_ >= 4096) {  // progress, not every fragment
-                logMsg("SYSEX accum=" + juce::String((int)sysexAccum_.size()) + " B, frags=" + juce::String(sysexFrags_));
-                sysexLogged_ = sysexAccum_.size();
-            }
-            if (sysexAccum_.back() == 0xF7) {
-                logMsg("SYSEX complete: total=" + juce::String((int)sysexAccum_.size()) +
-                       " B, frags=" + juce::String(sysexFrags_) + ", tail=[" +
-                       hexHead(sysexAccum_.data() + juce::jmax(0, (int)sysexAccum_.size() - 6), juce::jmin(6, (int)sysexAccum_.size())) + "]");
-                handleIncomingBytes(sysexAccum_);
-                sysexAccum_.clear();
-            } else if (sysexAccum_.size() > 300000) {
-                logMsg("SYSEX runaway reset at " + juce::String((int)sysexAccum_.size()) + " B");
-                sysexAccum_.clear();
-            }
+            if (sysexAccum_.back() == 0xF7) { handleIncomingBytes(sysexAccum_); sysexAccum_.clear(); }
+            else if (sysexAccum_.size() > 300000) sysexAccum_.clear();    // runaway guard
             continue;
         }
         if (listening && m.isController() && m.getChannel() == ch + 1) {
@@ -241,14 +280,10 @@ void MS2KAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         out.addEvent(m, meta.samplePosition);
     }
 
-    if (wantRequest_.exchange(false)) {
+    if (wantRequest_.exchange(false))
         addRaw(out, makeRequest(Func::CurrentProgramDumpRequest, (uint8_t)ch), 0);
-        logMsg("-> sent Current Program request (0x10) on ch " + juce::String(ch + 1));
-    }
-    if (wantBankRequest_.exchange(false)) {
+    if (wantBankRequest_.exchange(false))
         addRaw(out, makeRequest(Func::ProgramDumpRequest, (uint8_t)ch), 0);
-        logMsg("-> sent All Programs request (0x1C) on ch " + juce::String(ch + 1));
-    }
 
     if (anyDirty_.exchange(false)) {
         for (int i = 0; i < dirtyN_; ++i) {
@@ -275,30 +310,18 @@ void MS2KAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     midi.swapWith(out);
 }
 
-// TODO: Add a direct hardware MIDI input (RtMidi) for in-plugin bank receive
-//  Reaper doesn't pass real-time input SysEx to a track's FX chain, so the plugin's
-//  Get All / Get Current can't receive dumps over the host bus (see the README
-//  limitation and the wiki Troubleshooting page). Give the plugin an optional direct
-//  RtMidi input like the standalone to receive dumps + Listen, bypassing the DAW,
-//  and strip the diagnostic file logging once it lands.
-//  labels: enhancement
 void MS2KAudioProcessor::handleIncomingBytes(const Bytes& full) {
     auto toProgram = [](const Bytes& b) {
         std::array<uint8_t, kProgramSize> a{}; std::copy_n(b.begin(), kProgramSize, a.begin()); return Program(a);
     };
     if (auto prog = parseProgramDump(full)) {
-        logMsg("PARSE ok: single program (Get Current)");
         const juce::ScopedLock sl(incomingLock_);
         incomingProg_ = toProgram(*prog); hasIncoming_ = true;
     } else if (auto bank = parseBankDump(full)) {
-        logMsg("PARSE ok: BANK of " + juce::String((int)bank->size()) + " programs");
         std::vector<Program> progs; progs.reserve(bank->size());
         for (const auto& b : *bank) progs.push_back(toProgram(b));
         const juce::ScopedLock sl(incomingLock_);
         incomingBank_ = std::move(progs); hasIncomingBank_ = true;
-    } else {
-        logMsg("PARSE FAILED: len=" + juce::String((int)full.size()) +
-               " head=[" + hexHead(full.data(), (int)full.size()) + "]");
     }
 }
 
@@ -346,19 +369,28 @@ void MS2KAudioProcessor::applyParamFromSynth(int i, int raw) {
 // ---- state ------------------------------------------------------------------
 void MS2KAudioProcessor::getStateInformation(juce::MemoryBlock& dest) {
     juce::MemoryOutputStream os(dest, false);
-    os.writeInt(0x4D533201);                 // 'MS2\1' magic/version
+    os.writeInt(0x4D533202);                 // 'MS2\2' magic/version (adds MIDI-in name)
     os.writeInt(channel_.load());
     os.writeInt((int)defs_.size());
     for (auto& d : defs_) os.writeInt(d.param->get());
+    os.writeString(selectedInputName_);      // direct MIDI-in port
 }
 
 void MS2KAudioProcessor::setStateInformation(const void* data, int size) {
     juce::MemoryInputStream is(data, (size_t)size, false);
-    if (is.readInt() != 0x4D533201) return;
+    const int magic = is.readInt();
+    if (magic != 0x4D533201 && magic != 0x4D533202) return;
     setChannel(is.readInt());
     const int n = is.readInt();
     for (int i = 0; i < n && i < (int)defs_.size(); ++i)
         *defs_[(size_t)i].param = is.readInt();
+    if (magic == 0x4D533202) {
+        const juce::String inName = is.readString();
+        if (inName.isNotEmpty()) {
+            const int idx = midiInputNames().indexOf(inName);
+            if (idx >= 0) openMidiInput(idx);
+        }
+    }
 }
 
 juce::AudioProcessorEditor* MS2KAudioProcessor::createEditor() {
