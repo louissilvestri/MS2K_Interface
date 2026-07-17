@@ -282,7 +282,6 @@ void MS2KAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
 //  RtMidi input like the standalone to receive dumps + Listen, bypassing the DAW,
 //  and strip the diagnostic file logging once it lands.
 //  labels: enhancement
-//  milestone: 1
 void MS2KAudioProcessor::handleIncomingBytes(const Bytes& full) {
     auto toProgram = [](const Bytes& b) {
         std::array<uint8_t, kProgramSize> a{}; std::copy_n(b.begin(), kProgramSize, a.begin()); return Program(a);
