@@ -1,0 +1,23 @@
+# Turns new TODO / FIXME comments into GitHub issues when they're pushed to main,
+# and closes the issue when the comment is removed. Only scans the pushed diff,
+# so pre-existing comments (e.g. in the vendored RtMidi) are not touched.
+name: TODO to Issue
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  todo-to-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Convert TODO / FIXME comments to issues
+        uses: alstr/todo-to-issue-action@v5
+        with:
+          # Don't scan vendored third-party sources or build output.
+          IGNORE: "Source/midi/rtmidi/.*,build/.*"

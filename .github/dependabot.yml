@@ -1,0 +1,13 @@
+# Keeps the GitHub Actions used in .github/workflows up to date.
+# (JUCE is pinned via CMake FetchContent and RtMidi is vendored — neither is a
+# Dependabot-supported ecosystem — so GitHub Actions is what's watched here.)
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"

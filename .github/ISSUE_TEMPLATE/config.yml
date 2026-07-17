@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📖 Documentation (Wiki)
+    url: https://github.com/louissilvestri/MS2K_Interface/wiki
+    about: Setup, guides, MIDI reference, and building from source.
+  - name: 🛠 Troubleshooting
+    url: https://github.com/louissilvestri/MS2K_Interface/wiki/Troubleshooting
+    about: Check here first — SysEx filter, Reaper SysEx limitation, patch names, build errors.
