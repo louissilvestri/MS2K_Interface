@@ -28,7 +28,8 @@ drives the real synth over MIDI — as a **standalone app** and a **VST3 plugin*
 - **Standalone app** — talks to the synth directly (via RtMidi); the full editor, librarian, and
   sequencer in one window.
 - **VST3 plugin** (Reaper / any DAW) — a MIDI‑effect that emits on the host's output bus, so your
-  edits and automation are recorded and played back by the DAW.
+  edits and automation are recorded and played back by the DAW. It also opens an optional **direct
+  MIDI input** so patch dumps and live sync are received straight from the synth.
 
 ## Install (Windows)
 Download the self‑contained installers from the
@@ -52,10 +53,12 @@ Full guides and reference live in the **[Wiki »](https://github.com/louissilves
 [Troubleshooting](https://github.com/louissilvestri/MS2K_Interface/wiki/Troubleshooting) ·
 [Building from Source](https://github.com/louissilvestri/MS2K_Interface/wiki/Building-from-Source)
 
-> **Note (VST3 in Reaper):** the plugin's in‑host *Get All / Get Current* can't **receive** SysEx,
-> because Reaper doesn't pass real‑time input SysEx to a track's FX chain. Everything else works;
-> use the simple `.syx` workaround (standalone **Save .syx** → plugin **Load .syx**). See
-> [Troubleshooting](https://github.com/louissilvestri/MS2K_Interface/wiki/Troubleshooting).
+> **Note (VST3 in Reaper):** Reaper doesn't pass real‑time input SysEx to a track's FX chain, so
+> the plugin has its own **"MIDI In"** selector that opens the synth's port directly for
+> *Get All / Get Current / Listen* — disable that input in the DAW first (Windows MIDI inputs are
+> exclusive). No direct input? The `.syx` workaround still works (standalone **Save .syx** →
+> plugin **Load .syx**). See
+> [VST3 Plugin in Reaper](https://github.com/louissilvestri/MS2K_Interface/wiki/VST3-Plugin-in-Reaper).
 
 ## Build
 Builds with CMake + JUCE (fetched automatically). Full instructions:
