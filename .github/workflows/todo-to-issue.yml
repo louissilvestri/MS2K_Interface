@@ -19,5 +19,6 @@ jobs:
       - name: Convert TODO / FIXME comments to issues
         uses: alstr/todo-to-issue-action@v5
         with:
-          # Don't scan vendored third-party sources or build output.
-          IGNORE: "Source/midi/rtmidi/.*,build/.*"
+          # Don't scan the .github config itself (its own comments mention the
+          # keywords), vendored third-party sources, or build output.
+          IGNORE: ".github/.*,Source/midi/rtmidi/.*,build/.*"
