@@ -1,0 +1,29 @@
+# Fast CI: compile and run the pure-C++ core unit tests (SysEx codec, parameter
+# model, MIDI-message builders) on every push/PR to main. These don't need JUCE,
+# so the check runs in seconds.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Core unit tests (no JUCE)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compile & run tests
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall tests/test_sysex_codec.cpp  Source/midi/SysexCodec.cpp \
+              -o t_codec && ./t_codec
+          g++ -std=c++17 -Wall tests/test_param_model.cpp  Source/model/ParameterModel.cpp \
+              -o t_model && ./t_model
+          g++ -std=c++17 -Wall tests/test_midi_messages.cpp Source/midi/MidiMessages.cpp \
+              Source/model/ParameterModel.cpp -o t_msg && ./t_msg
