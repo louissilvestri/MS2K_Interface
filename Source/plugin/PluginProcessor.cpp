@@ -275,6 +275,14 @@ void MS2KAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     midi.swapWith(out);
 }
 
+// TODO: Add a direct hardware MIDI input (RtMidi) for in-plugin bank receive
+//  Reaper doesn't pass real-time input SysEx to a track's FX chain, so the plugin's
+//  Get All / Get Current can't receive dumps over the host bus (see the README
+//  limitation and the wiki Troubleshooting page). Give the plugin an optional direct
+//  RtMidi input like the standalone to receive dumps + Listen, bypassing the DAW,
+//  and strip the diagnostic file logging once it lands.
+//  labels: enhancement
+//  milestone: 1
 void MS2KAudioProcessor::handleIncomingBytes(const Bytes& full) {
     auto toProgram = [](const Bytes& b) {
         std::array<uint8_t, kProgramSize> a{}; std::copy_n(b.begin(), kProgramSize, a.begin()); return Program(a);

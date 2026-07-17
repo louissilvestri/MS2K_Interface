@@ -5,6 +5,9 @@ build*/
 # Compiled installers (the .iss scripts are tracked; the built .exe go to Releases)
 /dist/
 
+# Local working copy of the GitHub wiki (its own repo — not part of this one)
+/wiki/
+
 # Compiled / linked artifacts
 *.exe
 *.obj
